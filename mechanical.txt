@@ -1,0 +1,554 @@
+!義美同步點焊後長焊mech part code_bella_20191218
+!路徑無法折返sorry
+!■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■!
+!請命名體積step1_%u%~10_%u%為點焊接工序順序
+!請命名節點s1_%u%~10_%u%為焊接起始點
+!請命名節點e1_%u%~10_%u%為焊接終點
+!_%u%代表點焊的同步項次
+
+!請命名體積zone1~10為外焊道
+!請命名節點start1~10為焊接起始點
+
+!%ARG1%代表焊接時溫度
+!%ARG2%代表點焊接速度
+!%ARG3%代表點銲接工序有幾個
+!%ARG4%代表最長點焊大約幾個點(抓取點數)
+!%ARG5%代表點焊總共求解切幾段
+!命名點焊工序中有幾個同步
+pn1=4		!代表點焊第1道工序裡面有2條同時焊接
+pn2=4		!代表點焊第2道工序裡面有1條同時焊接
+pn3=4
+pn4=4
+pn5=4
+pn6=4
+pn7=4
+pn8=4
+pn9=4
+pn10=4
+pn11=2
+pn12=2
+pn13=2
+pn14=2
+
+!%ARG6%代表長焊接速度
+!%ARG7%代表長銲道總數目
+!%ARG8%代表長焊總共求解切幾段
+
+!完全冷卻的時間隨便給但需大於總焊接時間
+tcold=12000
+
+!■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■!
+
+!幫忙命名停損點
+esel,s,,,1
+*do,i,1,%ARG3%
+aaa=pn%i%+1
+cm,step%i%_%aaa%,elem
+*enddo
+alls
+
+
+
+
+/nerr,,99999999
+alltime=0
+
+	alls
+!!點焊抓取資訊
+*DO,KK,1,%ARG3%
+u=1
+uuu=1
+	*dowhile,uuu					!當uuu=0才停止
+	alls
+	
+	!抓step中起始點位置
+		cmsel,s,s%kk%_%u%,node
+		*get,tt_node_count,node,,count				!焊道now_node節點數目
+		s_cen_x=0
+		s_cen_y=0
+		s_cen_z=0
+		s_node=0
+		*do,i,1,tt_node_count
+		s_node=ndnext(s_node)
+		s_cen_x=s_cen_x+nx(s_node)
+		s_cen_y=s_cen_y+ny(s_node)
+		s_cen_z=s_cen_z+nz(s_node)  
+		*enddo
+		s_cen_x=s_cen_x/tt_node_count
+		s_cen_y=s_cen_y/tt_node_count
+		s_cen_z=s_cen_z/tt_node_count  
+		alls
+
+	!抓step中終點位置
+		cmsel,s,e%kk%_%u%,node
+		!cm,e_node_group,node
+		*get,tt_node_count,node,,count				!焊道now_node節點數目
+		e_cen_x=0
+		e_cen_y=0
+		e_cen_z=0
+		e_node=0
+		*do,i,1,tt_node_count
+		e_node=ndnext(e_node)
+		e_cen_x=e_cen_x+nx(e_node)
+		e_cen_y=e_cen_y+ny(e_node)
+		e_cen_z=e_cen_z+nz(e_node)  
+		*enddo
+		e_cen_x=e_cen_x/tt_node_count
+		e_cen_y=e_cen_y/tt_node_count
+		e_cen_z=e_cen_z/tt_node_count  
+		alls
+	
+	!抓取變量
+		delt_x=(e_cen_x-s_cen_x)/%ARG4%
+		delt_y=(e_cen_y-s_cen_y)/%ARG4%
+		delt_z=(e_cen_z-s_cen_z)/%ARG4%
+		dis=sqrt((e_cen_x-s_cen_x)**2+(e_cen_y-s_cen_y)**2+(e_cen_z-s_cen_z)**2)
+		steptime=dis/%ARG2%
+		delt_time=steptime/%ARG4%
+		
+	!====儲存矩陣====!
+cmsel,s,step%kk%_%u%,elem
+*get,elem_count,elem,,count
+	*dim,alive_data%kk%_%u%,array,elem_count,3		!一個Step做一個矩陣
+	 esel,invert
+	 cm,now_elem,elem
+
+!比較xyz大小(因為全部都無法=0)
+xxx=abs(delt_x)
+yyy=abs(delt_y)
+zzz=abs(delt_z)
+*if,xxx,ge,yyy,then
+	*if,yyy,ge,zzz,then
+	delt_y=0
+	delt_z=0
+	*else
+		*if,xxx,ge,zzz,then
+		delt_y=0
+		delt_z=0
+		*else
+		delt_x=0
+		delt_y=0
+		*endif
+	*endif
+*else
+	*if,xxx,ge,zzz,then
+	delt_x=0
+	delt_z=0
+	*else
+		*if,yyy,ge,zzz,then
+		delt_x=0
+		delt_z=0
+		*else
+		delt_x=0
+		delt_y=0
+		*endif
+	*endif
+*endif
+
+
+
+	alls
+	nnn=%ARG4%
+	xx=0
+	*do,i,1,nnn
+		xxx=abs(delt_x)
+		yyy=abs(delt_y)
+		zzz=abs(delt_z)
+		!x>0的可能
+		*if,xxx,gt,0,then
+			*if,i,eq,1,then
+			esel,s,cent,x,s_cen_x+(delt_x*(i-1)),s_cen_x+(delt_x*(i))
+			cmsel,s,s%kk%_%u%,node	$esln,a
+			cmsel,r,step%kk%_%u%,elem	
+			*elseif,i,eq,%ARG4%,then
+			esel,s,cent,x,s_cen_x+(delt_x*(i-1)),s_cen_x+(delt_x*(i))
+			cmsel,s,e%kk%_%u%,node	$esln,a
+			cmsel,r,step%kk%_%u%,elem	
+			*else
+			esel,s,cent,x,s_cen_x+(delt_x*(i-1)),s_cen_x+(delt_x*(i))
+			cmsel,r,step%kk%_%u%,elem	
+			*endif
+		*endif
+		
+		!y>0的可能
+		*if,yyy,gt,0,then
+			*if,i,eq,1,then
+			esel,s,cent,y,s_cen_y+(delt_y*(i-1)),s_cen_y+(delt_y*(i))
+			cmsel,s,s%kk%_%u%,node	$esln,a
+			cmsel,r,step%kk%_%u%,elem	
+			*elseif,i,eq,%ARG4%,then
+			esel,s,cent,y,s_cen_y+(delt_y*(i-1)),s_cen_y+(delt_y*(i))
+			cmsel,s,e%kk%_%u%,node	$esln,a
+			cmsel,r,step%kk%_%u%,elem	
+			*else
+			esel,s,cent,y,s_cen_y+(delt_y*(i-1)),s_cen_y+(delt_y*(i))
+			cmsel,r,step%kk%_%u%,elem	
+			*endif
+		*endif
+		
+		!z>0的可能
+		*if,zzz,gt,0,then
+			*if,i,eq,1,then
+			esel,s,cent,z,s_cen_z+(delt_z*(i-1)),s_cen_z+(delt_z*(i))
+			cmsel,s,s%kk%_%u%,node	$esln,a
+			cmsel,r,step%kk%_%u%,elem	
+			*elseif,i,eq,%ARG4%,then
+			esel,s,cent,z,s_cen_z+(delt_z*(i-1)),s_cen_z+(delt_z*(i))
+			cmsel,s,e%kk%_%u%,node	$esln,a
+			cmsel,r,step%kk%_%u%,elem	
+			*else
+			esel,s,cent,z,s_cen_z+(delt_z*(i-1)),s_cen_z+(delt_z*(i))
+			cmsel,r,step%kk%_%u%,elem	
+			*endif
+		*endif
+
+		cmsel,u,now_elem
+		cm,now_elem,elem
+		ttt=alltime+(i)*delt_time
+		*get,tt_elem_count,elem,,count
+		
+			now_elem=0
+			*do,ii,1,tt_elem_count
+			xx=xx+1
+			now_elem=elnext(now_elem)							!群組中下一個elem number
+			alive_data%kk%_%u%(xx,1)=now_elem						!第一行代表elem number
+			alive_data%kk%_%u%(xx,2)=ttt							!第二行代表到此elem時間	
+			*enddo
+			
+	*enddo
+	alls
+	u=u+1
+	cmsel,s,step%kk%_%u%
+	*get,uuu1,elem,,count
+	alls
+	*if,uuu1,eq,1,then
+		uuu=0  
+	*endif  
+	*enddo !dowhile
+
+
+
+
+	!這一段考慮機械手臂空移動未焊接的時間
+	!抓step中起始點位置
+	alltime=ttt
+	*if,kk,ne,%ARG3%,then
+		cmsel,s,s%kk+1%_1,node
+		*get,tt_node_count,node,,count				!焊道now_node節點數目
+		s_cen_x=0
+		s_cen_y=0
+		s_cen_z=0
+		s_node=0
+		*do,i,1,tt_node_count
+		s_node=ndnext(s_node)
+		s_cen_x=s_cen_x+nx(s_node)
+		s_cen_y=s_cen_y+ny(s_node)
+		s_cen_z=s_cen_z+nz(s_node)  
+		*enddo
+		s_cen_x=s_cen_x/tt_node_count
+		s_cen_y=s_cen_y/tt_node_count
+		s_cen_z=s_cen_z/tt_node_count  
+		alls	
+	
+		!抓取變量
+		dis=sqrt((e_cen_x-s_cen_x)**2+(e_cen_y-s_cen_y)**2+(e_cen_z-s_cen_z)**2)
+		steptime=dis/%ARG2%
+	
+	alltime=alltime+steptime	
+	*endif
+	alls
+	
+
+*ENDDO
+
+alls
+
+
+
+
+
+!長焊接thermal part code_bella_20191028
+!■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■!
+!這是短焊接到長焊中間的時間
+		cmsel,s,start1,node
+		*get,tt_node_count,node,,count				!焊道now_node節點數目
+		s_cen_x=0
+		s_cen_y=0
+		s_cen_z=0
+		s_node=0
+		*do,i,1,tt_node_count
+		s_node=ndnext(s_node)
+		s_cen_x=s_cen_x+nx(s_node)
+		s_cen_y=s_cen_y+ny(s_node)
+		s_cen_z=s_cen_z+nz(s_node)  
+		*enddo
+		s_cen_x=s_cen_x/tt_node_count
+		s_cen_y=s_cen_y/tt_node_count
+		s_cen_z=s_cen_z/tt_node_count  
+		alls	
+	
+		!抓取變量
+		dis=sqrt((e_cen_x-s_cen_x)**2+(e_cen_y-s_cen_y)**2+(e_cen_z-s_cen_z)**2)
+		steptime=dis/%ARG2%
+!■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■!
+
+
+alltime_p=alltime	!點焊完成的時間
+alltime=alltime+steptime	
+
+*DO,k,1,%ARG7%
+
+!抓長焊起點位置
+		cmsel,s,start%k%,node
+		*get,tt_node_count,node,,count				!焊道now_node節點數目
+		s_cen_x=0
+		s_cen_y=0
+		s_cen_z=0
+		s_node=0
+		*do,i,1,tt_node_count
+		s_node=ndnext(s_node)
+		s_cen_x=s_cen_x+nx(s_node)
+		s_cen_y=s_cen_y+ny(s_node)
+		s_cen_z=s_cen_z+nz(s_node)  
+		*enddo
+		s_cen_x=s_cen_x/tt_node_count
+		s_cen_y=s_cen_y/tt_node_count
+		s_cen_z=s_cen_z/tt_node_count  
+		alls	
+	
+		!抓取變量
+		dis=sqrt((e_cen_x-s_cen_x)**2+(e_cen_y-s_cen_y)**2+(e_cen_z-s_cen_z)**2)
+		steptime=dis/%ARG6%
+	
+
+
+
+
+	cmsel,s,zone%k%,elem
+	*get,step_elemnumber,elem,,count				!step中元素數量
+	*dim,alive_datalong%k%,array,step_elemnumber,3		!一個Step做一個矩陣
+	alls
+	
+	
+	xx=0
+
+
+now_time%k%=alltime
+	cmsel,s,zone%k%,elem
+	*get,elem_count,elem,,count						!整道焊道元素數量
+	*if,elem_count,gt,0,then
+		cm,temp_zone%k%,elem						!焊道命名
+		cmsel,s,start%k%,node
+		cm,now_node_group,node
+		*get,tt_node_count,node,,count				!焊道now_node節點數目
+
+		now_cen_x=0
+		now_cen_y=0
+		now_cen_z=0
+		now_node=0
+		*do,i,1,tt_node_count
+		now_node=ndnext(now_node)
+		now_cen_x=now_cen_x+nx(now_node)
+		now_cen_y=now_cen_y+ny(now_node)
+		now_cen_z=now_cen_z+nz(now_node)  
+		*enddo
+		now_cen_x=now_cen_x/tt_node_count
+		now_cen_y=now_cen_y/tt_node_count
+		now_cen_z=now_cen_z/tt_node_count  
+
+		alls
+
+
+		whindex=1
+		!=====將焊道elem的資訊全部寫成矩陣=====!
+		*dowhile,whindex					!當whindex=0才停止
+			last_cen_x=now_cen_x			!這一筆資料存成前一筆
+			last_cen_y=now_cen_y
+			last_cen_z=now_cen_z
+			
+			!選接下來連結的node當作now_node
+			alls
+			cmsel,s,now_node_group,node
+			esln
+			cmsel,r,temp_zone%k%,elem
+			nsle,s,corner
+			cmsel,u,now_node_group,node
+			cm,now_node_group,node
+			
+			*get,tt_node_count,node,,count
+			
+			now_cen_x=0
+			now_cen_y=0
+			now_cen_z=0
+			now_node=0
+			*do,i,1,tt_node_count
+				now_node=ndnext(now_node)
+				now_cen_x=now_cen_x+nx(now_node)
+				now_cen_y=now_cen_y+ny(now_node)
+				now_cen_z=now_cen_z+nz(now_node)  
+			*enddo
+			now_cen_x=now_cen_x/tt_node_count
+			now_cen_y=now_cen_y/tt_node_count
+			now_cen_z=now_cen_z/tt_node_count  
+			
+			dis_inc=sqrt((now_cen_x-last_cen_x)**2+(now_cen_y-last_cen_y)**2+(now_cen_z-last_cen_z)**2)
+			now_time%k%=now_time%k%+(dis_inc/%ARG6%)
+			
+			*get,tt_elem_count,elem,,count
+			
+			now_elem=0  
+			*do,ii,1,tt_elem_count
+			xx=xx+1     
+				now_elem=elnext(now_elem)							!群組中下一個elem number
+				alive_datalong%k%(xx,1)=now_elem						!第一行代表elem number
+				alive_datalong%k%(xx,2)=now_time%k%					!第二行代表到此elem時間
+			*enddo    
+			
+			esel,invert
+			cmsel,r,temp_zone%k%,elem
+			cm,temp_zone%k%,elem
+			
+			cmsel,s,temp_zone%k%,elem
+			*get,temp_elem_count,elem,,count
+			*if,temp_elem_count,lt,1,then
+				whindex=0  
+			*endif  
+		*enddo			
+	*endif
+
+
+!ttt為step中最長時間作為step的alltime
+	ttt=0
+	*do,j,1,%ARG7%
+	*if,now_time%j%,gt,ttt,then
+	ttt=now_time%j%
+	*endif
+	*enddo
+	alltime=ttt
+*ENDDO
+alls
+
+
+
+
+
+!=====屠宰場=====!
+/solu
+antype,4
+nropt,full
+cmsel,s,step1_1
+cm,kill,elem
+!殺死所有焊接點
+*do,kk,1,%ARG3%
+u=1
+uuu=1
+*dowhile,uuu
+cmsel,s,step%kk%_%u%
+cmsel,a,kill
+cm,kill,elem
+u=u+1
+cmsel,s,step%kk%_%u%
+*get,uuu1,elem,,count
+	*if,uuu1,eq,1,then
+		uuu=0  
+	*endif
+alls
+*enddo
+*enddo
+
+*do,kk,1,%ARG7%
+cmsel,s,zone%kk%	!殺死長焊
+cmsel,a,kill
+cm,kill,elem
+*enddo
+ekill,kill
+alls
+
+!=====開始求解=====!
+*DO,i,1,%ARG5%	!總時間切幾段
+last_time=(i-1)*(alltime_p/%ARG5%)
+now_time=i*(alltime_p/%ARG5%)
+cmsel,s,kill
+nsle
+ddele,all,temp
+alls
+	*do,j,1,%ARG3%	!工序
+	u=1
+	uuu=1
+	*dowhile,uuu
+	cmsel,s,step%j%_%u%,elem
+	*get,elem_count,elem,,count					!step中元素數量
+		*do,p,1,elem_count
+			time_elem=alive_data%j%_%u%(p,2)
+			*if,time_elem,gt,last_time,then
+			*if,time_elem,le,now_time,then
+				ealive,alive_data%j%_%u%(p,1)
+				alls
+			*endif
+			*endif
+		*enddo  
+	u=u+1
+	cmsel,s,step%j%_%u%,elem
+	*get,uuu1,elem,,count					!step中元素數量
+		*if,uuu1,eq,1,then
+		uuu=0  
+		*endif
+	alls	
+	*enddo
+	*enddo
+	alls
+
+esel,s,live
+*get,elem_live,elem,,count
+alls
+*if,elem_live,gt,0,then
+time,now_time
+solve
+*endif
+*ENDDO
+
+
+!=====長焊開始求解=====!
+
+
+!殺死所有焊接點
+
+alls
+
+*DO,i,1,%ARG8%	!總時間切幾段
+last_time=(i-1)*((alltime-alltime_p)/%ARG8%)+alltime_p
+now_time=i*((alltime-alltime_p)/%ARG8%)+alltime_p
+alls
+ddele,all,temp
+alls
+	*do,j,1,%ARG7%	!工序
+	cmsel,s,zone%j%,elem
+	*get,elem_count,elem,,count					!step中元素數量
+	*do,p,1,elem_count
+		time_elem=alive_datalong%j%(p,2)
+		*if,time_elem,gt,last_time,then
+		*if,time_elem,le,now_time,then
+			ealive,alive_datalong%j%(p,1)
+			alls
+		*endif
+		*endif
+	*enddo  
+	*enddo
+	alls
+time,now_time
+solve
+*ENDDO
+
+!/eof
+!!這一步微降溫用
+!time,
+!nsubst,100,1000,50
+!alls
+!ddele,all,temp
+!solve
+
+!阿不想等了只是要看變形阿
+nsubst,3,10,2
+time,tcold
+alls
+
