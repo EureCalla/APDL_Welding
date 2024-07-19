@@ -3,6 +3,7 @@
 ### 程式碼核心介紹
 🥑 此程式用於建立自動化機台焊接ANSYS模擬模型(包含長焊與點焊兩種工法)，並探討其焊接物料溫度、翹曲與應力等工況  
 ![image](https://github.com/EureCalla/APDL_Welding/blob/main/img01.png)
+![image](https://github.com/EureCalla/APDL_Welding/blob/main/img02.png)
 ### 注意事項
 1. 使用APDL語法撰寫並模型搭配使用ANSYS Workbench介面進行分析
 2. 串接thermal-mechanical熱固耦合分析
