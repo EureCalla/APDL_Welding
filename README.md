@@ -1,5 +1,4 @@
 # APDL_Welding
-
 ### 程式碼核心介紹
 🥑 此程式用於建立自動化機台焊接ANSYS模擬模型(包含長焊與點焊兩種工法)，並探討其焊接物料溫度、翹曲與應力等工況  
 ![image](https://github.com/EureCalla/APDL_Welding/blob/main/gif01.gif)
